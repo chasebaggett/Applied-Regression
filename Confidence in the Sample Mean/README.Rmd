@@ -3,8 +3,8 @@ title: "Confidence in the Sample Mean"
 author: "Chase Baggett"
 date: "September 12, 2017"
 output:
-  html_document: default
   github_document: default
+  html_document: default
   pdf_document: default
 ---
  
