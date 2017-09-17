@@ -1,0 +1,12 @@
+---
+title: "Applied Regression"
+author: "Chase Baggett"
+date: "September 17, 2017"
+output: html_document
+---
+
+## Applied Regression
+
+This repository holds example code applied regresion in R from coursework at the University of Minnesota. Assignments and data primarily come from pplied Linear Regression, Fourth Edition  by Sanford Weisberg, available as a book or an ebook from Wiley (ISBN 978-1-118-38608-8).
+
+The course site for this book is: http://users.stat.umn.edu/~sandy/alr4ed/ 
