@@ -2,9 +2,8 @@
 title: "Confidence in the Sample Mean"
 author: "Chase Baggett"
 date: "September 12, 2017"
-output:
-  pdf_document: default
-  html_document: default
+output: md_document
+  variant: markdown_github
 ---
  
 ```{r setup, include=FALSE}
