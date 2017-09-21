@@ -3,17 +3,24 @@ title: "Confidence in the Sample Mean"
 author: "Chase Baggett"
 date: "September 12, 2017"
 output:
-  github_document: default
-  html_document: default
   pdf_document: default
+  html_document: default
+  github_document: default
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ###2.1 An investigator found that a random sample of size 100 from a normal population resulted in a 95 percent confidence interval for the population mean with length 4. The investigator would like a confidence interval with length about 1. About how many observations should the investigator take to obtain a confidence interval with length about 1?
 
 Because the standard error is divided by the square root of the standard deviation, we say that information is gained at the square rate. Because of this, to make our confidence interval 4 times better, we have to increase our sample size by 16.
 
 I have included an example in code. 
-```{r}
+```{r warning=FALSE,background=FALSE,message=FALSE}
+library(alr4)
+library(ggpubr)
+library(Hmisc)
 perfect_normal <- function(n,mean,sd) { mean+sd*scale(rnorm(n)) }
 original_sample_size <- 100
 sample <- perfect_normal(100,mean=50,sd=40)
@@ -24,9 +31,11 @@ new_sample_size <- 1600
 new_sample <- perfect_normal(new_sample_size,mean=50,sd=40)
 std.error(new_sample)
 ```
-###2.2 (b) The investigator would like to test simultaneously the hypotheses µ = 0 and σ^2 = 1 about µ and σ^2. Suggest a test statistic and a test procedure, and discuss their rationale.
+###2.2 (b) The investigator would like to test simultaneously the hypothesesmean = 0 and variance = 1 aboutmean and variance. Suggest a test statistic and a test procedure, and discuss their rationale.
+
 
 ```{r}
+print("bleh")
 ```
 
 ###2.3 It is reasonable to treat the data for problem 1.1 in your text as a random sample? If so, what is your reason for this conclusion and what is the population? If not, what is the point of studying the data?
@@ -35,26 +44,59 @@ No, it is not a random sample of the earth's population because they only collec
 
 Studying non-random samples can still be useful outside the realm of statistics. Without the desire to infer anything from the population, It still says something about the people who were sampled, even if we can't say anything about people not sampled. 
 
-###2.4 Complete problem 1.1 in your text. In addition, print the graph requested as part of the solution to 1.1.3 and then sketch an estimate of the mean function by eye on the plot, describing the process that you used. Compare your estimate to a lowess smooth estimate of the mean function.
+###2.5 Assume that mheight in the data discussed in Section 1.1 in your text is a random sample from a normal distribution with meanmean and variance variance. 
 
-  1.1.1 The predictor is ppgdp in this case, and the response is fertility, because we want to know fertility's dependence on gdp per capita.
-  1.1.2 A straght line does not appear to well characterize the relationship.
-  1.1.3 However, for a log transformed x and y, a linear regression does seem plausible.
+####(a) derive the variance of the estimator for the estimated variance of the variance.
+The estimation variance is the variance divided by the sample size.
 ```{r}
-library(alr4)
-library(ggplot2)
-library(gridExtra)
-p1 <- ggplot(UN11,aes(x=ppgdp,y=fertility)) + geom_point(alpha=.5) + ggtitle("Fertility vs Per Capita GDP")
-p2 <- ggplot(UN11,aes(x=log(ppgdp),y=log(fertility))) + geom_point(alpha=.5) + ggtitle("Naturtal Log of Fertility vs Natual Log of Per Capita GDP")
-grid.arrange(p1,p2) 
+sd(Heights$mheight)^2 / nrow(Heights)
 ```
-###2.5 Assume that mheight in the data discussed in Section 1.1 in your text is a random sample from a normal distribution with mean µ and variance σ^2. 
-
-####(a) derive the variance of the estimator ˆσ^2 of σ^2. 
-####(b) Give the standard error of ˆσ^2.
+####(b) Give the standard error of ˆvariance.
+The standard error is the square root of the estimation variance. 
+```{r}
+sqrt(sd(Heights$mheight)^2 / nrow(Heights))
+```
 
 ###2.6 Assume that (mheight, dheight) in the data discussed in Section 1.1 in your text is a random sample from a bivariate normal population.
 ####(a) Estimate the correlation coefficient and describe what it is estimating.
-####(b) Estimate the conditional mean E(mheight | dheight) and variance var(mheigh | dheight).
+The correlation coefficient is the measure of linear correlation or dependence between mheight and dheight. Because our value is positive, they are positively correlated.  
+
+```{r}
+cor(Heights$mheight,Heights$dheight)
+#or
+cov(Heights$mheight,Heights$dheight)/(sd(Heights$mheight) * sd(Heights$dheight))
+```
 ####(c) Estimate the conditional mean E(dheight | mheight) and variance var(dheigh | mheight), and describe the connection with the regression of part (b).
-####(d) A mother’s height is 1 standard deviation (for mothers) above the average height for mothers. Her daughter’s height is expected to be ——— (fill in the blank with a number not a symbol) standard deviations (for daughters)
+
+Part b asked us for the expected value of mheight given dheight, whereas now we are looking for the expected height of a daughter conditional on knowing the mother's height. 
+
+We first fit a regression to the mean to understand the conditional mean, and see that we can expect the conditional mean a daughter's height given her mother's height is 29.91744 (Beta0) + .54175 * the mother's height. 
+```{r}
+fit <- with(Heights,lm(dheight~mheight))
+summary(fit)
+ggscatter(Heights,x="dheight",y="mheight",add = "reg.line",add.params = list(color = "blue", fill = "lightgray"))
+```
+In a simple linear regression, variance should be constant. 
+```{r}
+summary(fit)$sigma^2.
+```
+
+To verify the conditional variance is constant I am going to start dealing with residuals of our regression line. So, first, I create a dataset of our residuals. By squaring the residuals I can use the underlying machinery of the regression model to generate a conditional variance, and model how it changes conditioned on dheight. 
+
+We are essentially using another regression model to the process variance of our first regression model by asking the expectation of variance given dheight. 
+```{r}
+data <- Heights
+data$residuals <- fit$residuals
+data$variance <- fit$residuals^2
+ggscatter(data,x="variance",y="dheight",add = "reg.line",add.params = list(color = "blue", fill = "lightgray"))
+```
+It appears we have constant variance within our linear model. This fits our expectation that in a simple linear regression the residuals will have a mean of zero and a constant variance. 
+
+####(d) A mother’s height is 1 standard deviation (for mothers) above the average height for mothers. Her daughter’s height is estimated to be ——— (fill in the blank with a number not a symbol) standard deviations (for daughters)
+
+We would say that the daughter's height is equal to 0.4646328 standard deviations, or rho.  
+
+```{r}
+rho <- rcorr(Heights$dheight,Heights$mheight,type="spearman")
+rho$r[1,2]
+```
