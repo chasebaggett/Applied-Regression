@@ -1,5 +1,5 @@
 ---
-title: "Confidence in the Sample Mean"
+title: "Assignment 2"
 author: "Chase Baggett"
 date: "September 21, 2017"
 output:
