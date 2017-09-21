@@ -1,0 +1,21 @@
+"0","library(alr4)"
+"2","package ‘alr4’ was built under R version 3.4.1"
+"2","Loading required package: car
+"
+"2","Loading required package: effects
+"
+"2","package ‘effects’ was built under R version 3.4.1"
+"2","
+Attaching package: ‘effects’
+
+"
+"2","The following object is masked from ‘package:car’:
+
+    Prestige
+
+"
+"0","library(ggplot2)"
+"0","library(gridExtra)"
+"0","p1 <- ggplot(UN11,aes(x=ppgdp,y=fertility)) + geom_point(alpha=.5) + ggtitle(""Fertility vs Per Capita GDP"")"
+"0","p2 <- ggplot(UN11,aes(x=log(ppgdp),y=log(fertility))) + geom_point(alpha=.5) + ggtitle(""Naturtal Log of Fertility vs Natual Log of Per Capita GDP"")"
+"0","grid.arrange(p1,p2) "

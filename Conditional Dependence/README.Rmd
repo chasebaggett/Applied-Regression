@@ -1,7 +1,7 @@
 ---
 title: "Confidence in the Sample Mean"
 author: "Chase Baggett"
-date: "September 12, 2017"
+date: "September 21, 2017"
 output:
   pdf_document: default
   html_document: default
@@ -31,12 +31,9 @@ new_sample_size <- 1600
 new_sample <- perfect_normal(new_sample_size,mean=50,sd=40)
 std.error(new_sample)
 ```
-###2.2 (b) The investigator would like to test simultaneously the hypothesesmean = 0 and variance = 1 aboutmean and variance. Suggest a test statistic and a test procedure, and discuss their rationale.
+###2.2 (b) The investigator would like to test simultaneously the hypotheses mean = 0 and variance = 1 about mean and variance. Suggest a test statistic and a test procedure, and discuss their rationale.
 
-
-```{r}
-print("bleh")
-```
+We could hypothesis test the mean with a one sample t test. After that, a Chi-square test would allow us to test the variance. If we create a t statistic of the sum of squared residuals around the hypothesis mean, divided by the hypothesis variance of 1, then t is a Chi-squared distribution. We can identify the degrees of freedom and test the t statistic to a specific confidence level. 
 
 ###2.3 It is reasonable to treat the data for problem 1.1 in your text as a random sample? If so, what is your reason for this conclusion and what is the population? If not, what is the point of studying the data?
 
@@ -70,25 +67,25 @@ cov(Heights$mheight,Heights$dheight)/(sd(Heights$mheight) * sd(Heights$dheight))
 
 Part b asked us for the expected value of mheight given dheight, whereas now we are looking for the expected height of a daughter conditional on knowing the mother's height. 
 
-We first fit a regression to the mean to understand the conditional mean, and see that we can expect the conditional mean a daughter's height given her mother's height is 29.91744 (Beta0) + .54175 * the mother's height. 
+We first fit a regression to the mean to understand the conditional mean, and see that we can expect the conditional mean a daughter's height given her mother's height is 29.91744 + .54175 * mheight. 
 ```{r}
 fit <- with(Heights,lm(dheight~mheight))
 summary(fit)
-ggscatter(Heights,x="dheight",y="mheight",add = "reg.line",add.params = list(color = "blue", fill = "lightgray"))
+ggscatter(Heights,y="dheight",x="mheight",add = "reg.line",add.params = list(color = "blue", fill = "lightgray"))
 ```
 In a simple linear regression, variance should be constant. 
 ```{r}
 summary(fit)$sigma^2.
 ```
 
-To verify the conditional variance is constant I am going to start dealing with residuals of our regression line. So, first, I create a dataset of our residuals. By squaring the residuals I can use the underlying machinery of the regression model to generate a conditional variance, and model how it changes conditioned on dheight. 
+To verify the conditional variance is constant I am going to start dealing with residuals of our regression line. So, first, I create a dataset of our residuals. By squaring the residuals I can use the underlying machinery of the regression model to generate a conditional variance, and model how it changes conditioned on mheight. 
 
-We are essentially using another regression model to the process variance of our first regression model by asking the expectation of variance given dheight. 
+We are essentially using another regression model to the process variance of our first regression model by asking the expectation of variance given mheight. 
 ```{r}
 data <- Heights
 data$residuals <- fit$residuals
 data$variance <- fit$residuals^2
-ggscatter(data,x="variance",y="dheight",add = "reg.line",add.params = list(color = "blue", fill = "lightgray"))
+ggscatter(data,y="variance",x="mheight",add = "reg.line",add.params = list(color = "blue", fill = "lightgray"))
 ```
 It appears we have constant variance within our linear model. This fits our expectation that in a simple linear regression the residuals will have a mean of zero and a constant variance. 
 
