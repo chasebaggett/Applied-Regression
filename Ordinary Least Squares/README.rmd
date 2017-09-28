@@ -177,3 +177,25 @@ vcov(logmodel_fit)[1,2]
 ###2.8.1
 
 Alpha represents the value of y when x is equal to its sample mean. 
+
+###2.8.2
+
+As we can see below, we calculate alpha and y_bar separately, and get the same result. 
+
+```{r}
+fit <- with(Heights,lm(dheight~mheight))
+newdata <- data.frame(mheight=mean(Heights$mheight))
+alpha <- fit$coefficients[[1]] + mean(Heights$mheight) * fit$coefficients[[2]]
+y_bar <- mean(Heights$dheight) 
+
+alpha
+y_bar
+```
+
+```{r}
+beta_hat <- sum(fit$residuals)
+sxx <- sum(fit$residuals^2)
+```
+###2.8.3
+
+The variance of beta is the standard deviation of X divided by the sum of squares for the Xs.
