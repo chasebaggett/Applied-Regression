@@ -1,0 +1,176 @@
+---
+title: "Untitled"
+author: "Chase Baggett"
+date: "September 24, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 3.1
+###2.4.1
+
+```{r}
+library(alr4)
+library(ggplot2)
+library(ggpubr)
+data <- UBSprices
+
+model_fit <- with(UBSprices,lm(bigmac2009~bigmac2003))
+data$Estimate <- predict(model_fit)
+data$Residuals <- model_fit$residuals
+
+#Too crowded to show all country names, so we limit the titles.
+data$Country <- row.names(data)
+data$Country <- ifelse(abs(data$Residuals) >= sd(data$Residuals),data$Country,NA)
+data$Color <- ifelse(abs(data$Residuals) >= sd(data$Residuals)*2,"red","black")
+
+ggplot(data, aes(x = bigmac2003, y = bigmac2009)) + 
+         geom_point() +
+         geom_point(data=subset(data,Color=="red"),color="red") +
+         stat_smooth(method="lm",col="blue",se = FALSE) +
+         geom_abline(slope=1,intercept=0,color="black",linetype="dashed",alpha=.5) +
+         geom_text(aes(label=Country), size=4,vjust=1.5)
+```
+
+
+The dashed line is y = x, which represents zero inflation or deflation. Our linear line is below the dashed line, therefore we can consider that the price of a Big Mac has decreased for the samples from 2003 to 2009 on average.
+
+Some countries declined very severely. I've called out with labels the countries with an error greater than one standard deviation, and marked red those points within two standard deviations. 
+
+The most unusual points are Jakarta and Caracas. The price of a big mac has roughly doubled for those countries, while on average, the price of a big mac has fallen. 
+
+###2.4.2
+  
+First, there is not even variance. I am going to break the plot into evenly sized groups and show a violin plot to see conditional variance as bigmac2003 increases. Since there are 54 datapoints we'll use 6 groups of 9.
+
+As we can see from the histograms on each group in the violin plot, variance increases with bigmac2003. 
+  
+```{r}
+data <- data[order(data$bigmac2003),]
+data$Group <- rep(1:6,each=9)
+ggviolin(data,x="Group",y="bigmac2009",fill="Group")
+```
+
+Secondly, the data is not very normally distributed and has considerible skew.
+
+
+
+```{r}
+library(reshape)
+dens_data <- melt(data[c("bigmac2003","bigmac2009")])
+ggdensity(dens_data, x = "value",
+   add = "mean", rug = TRUE,
+   color = "variable", fill = "variable",
+   palette = c("#00AFBB", "#E7B800")) + ggtitle("Density Plot")
+
+ggqqplot(dens_data, x = "value",
+   color = "variable", palette = c("#00AFBB", "#E7B800")) + ggtitle("Quantile-Quantile Plot")
+```
+
+###2.4.3
+
+```{r}
+data$logbigmac2003 <- log(data$bigmac2003)
+data$logbigmac2009 <- log(data$bigmac2009)
+
+ggplot(data, aes(x = logbigmac2003, y = logbigmac2009)) + 
+         geom_point() +
+         geom_point(data=subset(data,Color=="red"),color="red") +
+         #stat_smooth(method="lm",col="blue",se = FALSE) +
+         geom_abline(slope=1,intercept=0,color="black",linetype="dashed",alpha=.5) +
+         geom_text(aes(label=Country), size=4,vjust=1.5)
+```
+
+Loging the values has done several positive things for us. The variance is smoother over the course of the series, the data is more approximately normal with only moderate skew, and our unusual values now have reduced error. 
+
+```{r}
+data <- data[order(data$logbigmac2003),]
+data$GroupLog <- rep(1:6,each=9)
+ggviolin(data,x="GroupLog",y="logbigmac2009",fill="GroupLog")
+
+library(reshape)
+dens_log <- melt(data[c("logbigmac2003","logbigmac2009")])
+ggdensity(dens_log, x = "value",
+   add = "mean", rug = TRUE,
+   color = "variable", fill = "variable",
+   palette = c("#00AFBB", "#E7B800")) + ggtitle("Density Plot")
+
+ggqqplot(dens_log, x = "value",
+   color = "variable", palette = c("#00AFBB", "#E7B800")) + ggtitle("Quantile-Quantile Plot")
+```
+
+###3.2.1
+
+```{r}
+ggplot(data, aes(x = logbigmac2003, y = logbigmac2009)) + 
+         geom_point() +
+         geom_point(data=subset(data,Color=="red"),color="red") +
+         #stat_smooth(method="lm",col="blue",se = FALSE) +
+         geom_abline(slope=1,intercept=0,color="black",linetype="dashed",alpha=.5) +
+         geom_text(aes(label=Country), size=4,vjust=1.5)
+```
+
+###3.2.2
+
+The standard error of Beta 0 and Beta 1 are estimated of the standard deviation of the population for our intercept and slope of our regression line. The estimate is based on central limit theorem and the idea of repeated sampling from a the population and the expectation that those samples will be normally distributed, and we are working with one of the samples of size n. 
+```{r}
+logmodel_fit <- with(data,lm(bigmac2009~bigmac2003))
+logmodel_summary <- summary(logmodel_fit)
+se_beta0 <- logmodel_summary$coefficients[1,2]
+se_beta1 <- logmodel_summary$coefficients[2,2]
+print(paste("Standard Error of Beta 0",se_beta0,sep=": "))
+print(paste("Standard Error of Beta 1",se_beta1,sep=": "))
+```
+
+###3.2.3
+```{r}
+beta0 <- logmodel_summary$coefficients[1,1]
+beta1 <- logmodel_summary$coefficients[2,1]
+#For 95% Confidence
+z <- 1.96
+
+beta0_low <- beta0 - se_beta0*z
+beta0_high <- beta0 + se_beta0*z
+
+beta1_low <- beta1 - se_beta1*z
+beta1_high <- beta1 + se_beta1*z
+
+print(paste("Beta0 95% Confidence Interval:",beta0_low,"to",beta0_high))
+print(paste("Beta1 95% Confidence Interval:",beta1_low,"to",beta1_high))
+
+#Verify with a base package.
+#Use the confint.default instead of confint to get the Wald confidence interval instead of the R default profile likelihood limit. 
+confint.default(logmodel_fit, level = .95)
+```
+
+###3.2.4
+
+We want to test if Beta0 = 0 and Beta1 = 1 because it corresponds to no net change in inflation for big macs. A point exactly on that line costs the same in 2003 as it does in 2009. Deviation from that line represent changes in big mac pricing for that sample. 
+
+We find a p value for beta0 of roughly .085, which means we don't have strong evidence to reject the null hypothesis.
+
+However, we find a p value of less than .01 for Beta1, which means we have evidence to reject the null hypothesis.  
+
+```{r}
+t_beta0 <- (beta0 - 0)/se_beta0
+p_beta0 <- dnorm(t_beta0)
+p_beta0
+
+t_beta1 <- (beta1 - 1)/se_beta1
+p_beta1 <- dnorm(t_beta1)
+p_beta1
+```
+
+###3.2.5
+We see that beta0 and beta1 are negative correlated. This means that as beta0 increases, beta1 would have to decrease, and vice versa. This is logical when you consider that to minimize least squares, if we forced a higher intercept, the slope would have to decrease.
+
+```{r}
+vcov(logmodel_fit)[1,2]
+```
+
+##2.8
