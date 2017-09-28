@@ -174,3 +174,6 @@ vcov(logmodel_fit)[1,2]
 ```
 
 ##2.8
+###2.8.1
+
+Alpha represents the value of y when x is equal to its sample mean. 
