@@ -1,0 +1,99 @@
+---
+title: "Untitled"
+author: "Chase Baggett"
+date: "September 24, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+##4.1
+```{r setup, include=FALSE}
+library(alr4)
+model <- with(brains,lm(log(BrainWt) ~ log(BodyWt)))
+```
+
+###4.1.1
+
+```{r}
+newdata <- data.frame(BodyWt=500)
+predict(model,newdata=newdata, interval="predict") 
+```
+
+###4.1.2
+
+The confidence interval is the expectation of the mean of the population under repeated sampling. That is, its an estimated range of a mean of a larger set of data. The prediction interval, by contrast, is the range of any given specific point that might occur. Because of this, the prediction interval is wider. 
+
+##4.2
+
+##4.3
+###2.20.1
+```{r}
+model <- with(oldfaith,lm(Interval~Duration))
+print(paste(coefficients(model)[1],"+ Duration *",coefficients(model)[2]))
+```
+
+###2.20.2
+
+The questions asks, specifically, for the confidence interval, which is below.
+
+```{r}
+newdata=data.frame(Duration=250)
+predict(model,newdata=newdata,interval="confidence",level=.95)
+```
+However, the phrasing of the problem, ie, confidence for the next eruption, is more suitable for the use of the prediction interval. Using the confidence interval would provide a false sense of certainty about the next eruption, which could fall in a much wider range than the estimated. mean of the population. 
+
+```{r}
+newdata=data.frame(Duration=250)
+predict(model,newdata=newdata,interval="prediction",level=.95)
+```
+###2.20.3
+80% confidence should find the 10%-90%, so the upper should be the 90% quantile.
+```{r}
+predict(model,newdata=newdata,interval="prediction",level=.8)[3]
+```
+
+###4.3.2
+
+The slope in this context is a measure of the change in the time until next eruption conditioned on the length of the last eruption. Our data suggests that longer eruptions lead to greater intervals between eruptions, and the slope measures that linear relationship. 
+
+###4.3.3
+
+```{r}
+newdata <- data.frame(Duration=c(250,125))
+predict(model,newdata=newdata,interval="confidence",level=.8)
+```
+
+###4.3.4
+```{r}
+cor(oldfaith$Duration,oldfaith$Interval)
+```
+
+No, it is not a complete summary. The correlation coefficient is a measure of linear dependence, and is incomplete for non-linear relationships. The R^2, on the other hand, represents the improvement from the median model, or some other small model, and is therefore a measure of relative dependence between two competing models, not a complete summary of all models. 
+
+###4.3.5
+```{r}
+data <- oldfaith
+
+#Force the slop to .25, let the model find the intercept. 
+small_model <- with(data,lm(I(Duration-.25)~1))
+small_model_intercept <- coefficients(small_model[1])
+small_model_slope <- .25
+
+data$Small_Model_Prediction <- small_model_intercept + small_model_slope * data$Duration
+
+small_mode_rss <- sum((data$Small_Model_Prediction - data$Interval)^2)
+
+#Fit the model as normal. 
+model <- with(oldfaith,lm(Interval~Duration))
+large_model_rss <- sum(model$residuals^2)
+
+#R Square Calculation
+(small_model_rss - large_model_rss)/small_model_rss
+```
+###4.3.6
+Yes, the relationship does not appear linear. 
+```{r}
+ggplot(oldfaith,aes(x=Duration,y=Interval)) + geom_point() + geom_smooth(method = "loess")
+```
+##4.4
