@@ -1,0 +1,57 @@
+---
+title: "Confidence in the Sample Mean"
+author: "Chase Baggett"
+date: "September 12, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  github_document: default
+---
+ 
+#5.1
+##5.1.1
+
+```{r}
+library(alr4)
+library(psych)
+library(ggplot2)
+initial_model <- with(BGSgirls,lm(BMI18~WT9))
+second_model <- with(BGSgirls,lm(BMI18~WT9 + ST9))
+residual_model <- lm(resid(initial_model)~resid(second_model))
+avPlots(second_model,main="Added Varialbe Plots of Both WT9 and ST9")
+ggplot(BGSgirls,aes(x=WT9,y=ST9)) + geom_point() + geom_smooth() + ggtitle("Plot of WT9 vs ST9")
+
+mmps(second_model,layout = c(2, 2))
+```
+
+---SUMMARIZE RESULTS---
+
+##5.1.2
+
+```{r}
+model <- with(BGSgirls,lm(BMI18~HT2 + WT2 + HT9 + WT9 + ST9))
+model_summary <- summary(model)
+```
+R-Squared
+```{r}
+model_summary$r.squared
+```
+Sigma
+```{r}
+model_summary$sigma
+```
+T-Values
+```{r}
+coef(model_summary)[, "t value"]
+```
+
+Hypothesis Test and Conclusion
+---ADD---
+
+##5.2.3
+
+I am assuming X to mention the matrix of X values as notated as such in the book on page 60. Therefore, the first row of X would be the first row of the matrix of predictors. I pull the matrix out of the model, pull the first row, remove the first column which is the Y. 
+
+```{r}
+model$model[1,-1]
+```
