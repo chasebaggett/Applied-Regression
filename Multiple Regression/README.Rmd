@@ -1,7 +1,7 @@
 ---
-title: "Confidence in the Sample Mean"
+title: "Assignment 5"
 author: "Chase Baggett"
-date: "September 12, 2017"
+date: "October 19, 2017"
 output:
   pdf_document: default
   html_document: default
@@ -11,10 +11,13 @@ output:
 #5.1
 ##5.1.1
 
-```{r}
+```{r, include=F}
 library(alr4)
 library(psych)
 library(ggplot2)
+```
+```{r}
+
 initial_model <- with(BGSgirls,lm(BMI18~WT9))
 second_model <- with(BGSgirls,lm(BMI18~WT9 + ST9))
 residual_model <- lm(resid(initial_model)~resid(second_model))
@@ -23,8 +26,9 @@ ggplot(BGSgirls,aes(x=WT9,y=ST9)) + geom_point() + geom_smooth() + ggtitle("Plot
 
 mmps(second_model,layout = c(2, 2))
 ```
+The added variable plots let us look at the effect of one variable after adjustment for others. So in this added variable plot we can see the effect of ST9 and WT9 on BMI18 after the other adjustment for other predictor. We can see that ST9 is negatively correlated after adjustment for WT9, and WT9 is positively correlated after adjustment for ST9. 
 
----SUMMARIZE RESULTS---
+From looking at the marginal plots we can see that our model's fit declines as we attempt to predict higher fitted values. 
 
 ##5.1.2
 
@@ -46,12 +50,69 @@ coef(model_summary)[, "t value"]
 ```
 
 Hypothesis Test and Conclusion
----ADD---
+We are testing the hypothesis that our coefficients are equal to zero with a two sided test. With the exception of our intercept and ST9, we fail to prove significance. 
 
 ##5.2.3
 
-I am assuming X to mention the matrix of X values as notated as such in the book on page 60. Therefore, the first row of X would be the first row of the matrix of predictors. I pull the matrix out of the model, pull the first row, remove the first column which is the Y. 
+I am assuming X to refer to the n x (p+1) matrix of X values as notated as such in the book on page 60. Therefore, the first row of X would be the first row of the matrix of predictors. I pull the matrix out of the model, pull the first row, remove the first column which is the Y. 
 
 ```{r}
 model$model[1,-1]
 ```
+
+##5.1.4
+###A
+R^2 is the ratio of the change in RSS from one model to another. The response vs fitted values shows relationship to the RSS of a single model. 
+```{r}
+plot(BGSgirls$BMI18,predict(model))
+```
+
+###5.1.5
+If we take the square root of the values of the variance-covariance matrix, we get the standard errors on the diagonals, which we can see matches the standard errors calculated by the model. The fourth diagnal element is the standard error for HT9, 0.09634358. 
+###B
+```{r}
+coef(model_summary)[, "Std. Error"]
+sqrt(abs(vcov(model)))
+```
+
+##5,1,5
+```{r}
+deg_freedom <- nrow(model$model)
+qchisq(.95,df=deg_freedom)
+```
+
+##5.2
+
+###3.4.1
+
+I used a random normal dataset to test this. The line plot appears to show a line that has roughly 2.2 times the slope of the added variable plot for x1. 
+
+```{r}
+data <- data.frame(y=1:10)
+data$x1 <- rnorm(10)
+data$x2 <- data$x1*2.2
+model <- with(data,lm(y ~ x1 + x2))
+avPlots(model)
+```
+  
+###3.4.2
+
+In this situation X1 is a perfect predictor of y, therefore it can't improve the model.
+
+```{r}
+data <- data.frame(y=1:10)
+data$x1 <- rnorm(10)
+data$x2 <- data$x1*2.2
+data$y <- data$x1 * 3
+model <- with(data,lm(y ~ x1 + x2))
+avPlots(model)
+```
+
+###3.4.3
+
+When the additional information gained by adding X2 is completely unique to x2, that is to say that none of the variation had already been explained by x1. 
+
+###3.4.4
+
+True. Additional predictors can't cause a model to decline because of the option to reduce the coefficient to zero, given in least squares we are optimizing for this vertical distance. 
+  

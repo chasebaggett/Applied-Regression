@@ -1,0 +1,87 @@
+---
+title: "Untitled"
+author: "Chase Baggett"
+date: "October 25, 2017"
+output: html_document
+---
+##6.1
+###6.1.1
+```{r setup, include=FALSE}
+library(alr4)
+model_1 <- lm(BMI18 ~ WT2 + WT9 + WT18, BGSgirls)
+
+BGSgirls$ave <- (BGSgirls$WT2 +  BGSgirls$WT9 +  BGSgirls$WT18)/3
+BGSgirls$lin <-  BGSgirls$WT18 -  BGSgirls$WT2
+BGSgirls$quad <-  BGSgirls$WT2 - 2*BGSgirls$WT9 +  BGSgirls$WT18
+model_2 <- lm(BMI18 ~ ave + lin + quad, BGSgirls)
+```
+
+```{r}
+summary(model_1)
+summary(model_2)
+```
+A plot of the fitted values of both models shows that the predictions out of the two models are identical.
+
+```{r}
+library(ggplot2)
+BGSgirls$Model_1 <- predict(model_1)
+BGSgirls$Model_2 <- predict(model_2)
+ggplot(BGSgirls,aes(x=Model_1,y=BMI18)) + geom_point(color="blue") + geom_point(aes(x=Model_2,y=BMI18),color="red",alpha=.5)
+```
+
+We'll verify with an equality check to the 4th decimal. 
+```{r}
+round(BGSgirls$Model_1,4) == round(BGSgirls$Model_2,4)
+```
+
+In essence the models are the same, we've simply combined some terms so our coefficients might be more interpretable. 
+
+
+###6.1.2
+
+In the first model, 2 of our 3 variables had significance, whereas in the new model the linear combination of all three has significance. This could have us in interpretation if we believe that that the change in BMI18 is changing in a linear way. 
+
+###6.1.3
+The variance inflation is a metric which quantifies collinearity. It estimates the affect on variance caused by collinearity. In our second model, our variance infatlion factors are much higher, because we've increased collinearity of our terms via the transformation. 
+```{r}
+vif(model_1)
+
+```
+
+###6.1.4
+```{r}
+vcov(model_2)[3,3]
+summary(model_2)$sigma^2/sd(BGSgirls$lin)^2/vif(model_2)[[2]]/nrow(BGSgirls)
+```
+###6.1.5
+```{r}
+BGSgirls$sn_ave <- BGSgirls$ave/sd(BGSgirls$ave)
+BGSgirls$sn_lin <- BGSgirls$lin/sd(BGSgirls$lin)
+BGSgirls$sn_quad <- BGSgirls$quad/sd(BGSgirls$quad)
+model_sn <- lm(BMI18 ~ sn_ave + sn_lin + sn_quad, BGSgirls)
+summary(model_sn)
+```
+We have scaled each variable to its standard normal equiivalent. We have not mathametically made any noteworthy changes to the model, but the scale will guide our interpretation around the power of each variable to move the estimate around. We can  see that the estimate for the standard normal of lin is the highest, so it has the largest ability to affect the estimate as it varies. 
+
+###5.1.5
+```{r}
+summary(model_1)$r.squared
+summary(model_2)$r.squared
+summary(model_1)$sigma
+summary(model_2)$sigma
+```
+They are the same, which is to be expected as the models are mathematically equivalent, and merely transformations for interpretation
+
+##6.2
+The coefficient for x1 will be negative anytime there is a negative linear relationship between the value of x1 and the conditional mean of Y. That is to say, that on average, the value of Y is decreasing given a corrresponding increase to x1. 
+
+##6.3
+###4.9.1
+In this example we have two coefficients, which are traditionally interpreted as the the intercept and the slope, but with a binary variable, we can more easily think of this as the intercept and an adjustment to that intercept given the binary variable equals 1.
+
+For a male, the estimate is simply equal to the intercept without the adjustment term, 24697.
+
+For a female, the estimate is equal to the intercept with the adjustment term, 24697-3340.
+
+###4.9.2
+Essentially, we have a relationship between our two predictors(Years and Sex) that provides the scenario that, on average, male professors have a higher number of years in their current role. This results in the variation that had been explained by sex being explained by years. 
