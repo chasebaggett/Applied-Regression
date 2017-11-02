@@ -6,6 +6,11 @@ output: html_document
 ---
 
 ##7.1
+###5.1.1
+```{r}
+library(linl)
+library(ggplot2)
+```
 ##7.2
 ###5.8.1
 ```{r}
@@ -47,4 +52,51 @@ summary(alternative_hypothesis)
 confint(alternative_hypothesis,"Sex",level=.95)
 ```
 ##7.4
+###A
+  The effect of each of the variables: HT2, H9, and Sex are separate. The effect of HT2 and HT9 is not dependent sex or vice versa.  
+###B
+  There is a different effect of Sex for HT2 vs HT9, which allows HT2 and HT9s effect to be different for Sex of male or female. 
+###C
+  There are now interraction terms between HT2 and HT9, as well as the full interaction of Sex with HT2 and HT9, which allows for joint variation of our variables. The effect of HT2 or HT9 now depends on both the other HT variable as well as sex, giving full interraction between all of our terms to provide a prediction.  
 ##7.5
+###5.17.1
+I'm going to use ggpairs from the ggally package because it provides a quick look into the data. It provides us automatically with boxplots of the factor variables, correlation coefficients between our continuous variables and along the diagonals it has density plots of continuous variables and barplots of our factors.
+
+We see alot of correlation between ysdeg and years, and ysdeg and salary, and years and salary. We see that between the sexes, male salaries are higher, but the highest salary is a female. We see that with ysdeg, there is a tigher band for males than females, which are a much wider distribution. For years at current rank, males have a mnuch higher mean than females. 
+
+```{r}
+library(GGally)
+ggpairs(salary)
+```
+
+I'm also dig into the purely numerical data using coloring for males and females using a scatterplot matrix.
+
+Looking at the densities on the diagnoal, we can see that the density of years in current rank is much higher for males at the top left. The density for ysdeg is very normal for males, but very non-normal for females. We can also note that the density for year and salary for male and females look very similar. 
+
+Looking at the correlation scatterplots and coefficients we can see that the correlation between years and year since degree is higher for males than it is for females, which might suggest that males have been in a more stable position in their career for longer. The correlation between salary and years since degree is higher for Males than it is for females, which might suggest that without changing positions men are given salary increases more regularly. These are all simply hypothesis formed by looking at the data, and could be dangerous without the use of a holdout set. 
+
+```{r}
+ggscatmat(salary, color="sex", alpha=0.8)
+```
+###5.17.2
+
+We can do a basic t-test on sex to answer the question in broad terms. We can see a significance level of .07, which could be rejected or accepted based on our confidence level. We see a $3340 higher salary for men. An alternative hypothesis is to use our above exporation to seek a "lurking" variable in the form of years or years since degree. 
+
+
+```{r}
+summary(lm(salary ~ sex, data=salary))
+```
+
+###5.17.3
+```{r}
+model <- lm(salary ~ ., data=salary)
+confint(model,parm="sexFemale",level=.95)
+```
+###5.17.4
+```{r}
+model2 <- update(model,~.-rank)
+summary(model2)$coef
+```
+The salary is still lower for women, but loses statistical significance. Logically, we moved rank because we think its biased-- but all variables can be biased. Because the lurking variable "explains" the salary difference does not mean there is no discrimination, because it can be a vehicle for discrimination.
+
+If it is harder for women to stay in the same role, it effects years in their current rank, and not retaining women at the same rate throughout the years could still be discriminatory. Similarly, only hiring women with less time since degree could be discriminatory hiring practices. We need separate and different models to examine years since degree and years in current rank as responses to understand if there is discrimination, but that is beyond the scope of the data we have in front of us. 
