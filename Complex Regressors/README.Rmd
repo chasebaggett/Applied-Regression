@@ -1,0 +1,50 @@
+---
+title: "Untitled"
+author: "Chase Baggett"
+date: "November 1, 2017"
+output: html_document
+---
+
+##7.1
+##7.2
+###5.8.1
+```{r}
+library(alr4)
+options(scipen=999)
+cakes$X22 <-cakes$X2^2 
+cakes$X12 <- cakes$X1^2
+model <- lm(Y ~ X1 + X2 + X12 + X22 + X1*X2 ,data=cakes)
+summary(model)
+```
+###5.8.2
+We can add it as an additive, non-interracted effect, but we see it is not significant.
+```{r}
+model <- lm(Y ~ X1 + X2 + X12 + X22 + X1*X2 + block,data=cakes)
+summary(model)
+```
+If we keep the original term in, and add interractions with block and both X1 and X2, we see the interraction with X1 seems significant. 
+```{r}
+model <- lm(Y ~ X1 + X2 + X12 + X22 + X1*X2 + block + block*X1 + block*X2,data=cakes)
+summary(model)
+```
+##7.3
+###5.14.1
+```{r}
+ggplot(BGSall,aes(x=HT9,y=HT18,shape=factor(Sex),color=factor(Sex))) + geom_point()
+```
+Looking at the data it looks like we would have two parallel lines, with an adjusted intercept for male or female. So our mean function would be E(HT18|HT19) = B0 + B1*HT19 + B2*Sex.
+###5.14.2
+We compare the null hypothesis model to the alternative hypothesis using an anova. The null hypothesis is the model that does not include Sex. Our alternative hypothesis is that sex creates an adjustment of the intercept. 
+```{r}
+null_hypothesis <- lm(HT18~HT9,data=BGSall)
+alternative_hypothesis <- lm(HT18~HT9 + Sex,data=BGSall)
+anova(null_hypothesis,alternative_hypothesis)
+```
+###5.14.3
+Our model tells us that we expect the intercept at Sex = 0 to be 48.5, and that at Sex = 1, it will be 48.5 - 11.6. That difference of 11.6 has a confidence interval which can be estimated in R with the confint function. We can see that the difference can be estimate to a 95% confidence to be between 10.5 and 12.9. 
+```{r}
+summary(alternative_hypothesis)
+confint(alternative_hypothesis,"Sex",level=.95)
+```
+##7.4
+##7.5

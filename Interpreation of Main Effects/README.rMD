@@ -1,13 +1,21 @@
 ---
-title: "Untitled"
+title: "Assignment 6"
 author: "Chase Baggett"
-date: "October 25, 2017"
-output: html_document
+date: "October 26, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  github_document: default
 ---
+
+```{r, include=F}
+library(alr4)
+library(ggplot2)
+```
+
 ##6.1
 ###6.1.1
 ```{r setup, include=FALSE}
-library(alr4)
 model_1 <- lm(BMI18 ~ WT2 + WT9 + WT18, BGSgirls)
 
 BGSgirls$ave <- (BGSgirls$WT2 +  BGSgirls$WT9 +  BGSgirls$WT18)/3
@@ -20,13 +28,15 @@ model_2 <- lm(BMI18 ~ ave + lin + quad, BGSgirls)
 summary(model_1)
 summary(model_2)
 ```
-A plot of the fitted values of both models shows that the predictions out of the two models are identical.
+A plot of the fitted values of both models shows that the predictions out of the two models provide equivalent fits for the data. My two shapes are an X and a +. Perfect overlap creates a *. 
 
 ```{r}
-library(ggplot2)
+
 BGSgirls$Model_1 <- predict(model_1)
 BGSgirls$Model_2 <- predict(model_2)
-ggplot(BGSgirls,aes(x=Model_1,y=BMI18)) + geom_point(color="blue") + geom_point(aes(x=Model_2,y=BMI18),color="red",alpha=.5)
+ggplot(BGSgirls,aes(x=Model_1,y=BMI18)) + 
+  geom_point(shape=4) +
+  geom_point(aes(x=Model_2,y=BMI18),shape=3,alpha=.5)
 ```
 
 We'll verify with an equality check to the 4th decimal. 
@@ -34,24 +44,33 @@ We'll verify with an equality check to the 4th decimal.
 round(BGSgirls$Model_1,4) == round(BGSgirls$Model_2,4)
 ```
 
-In essence the models are the same, we've simply combined some terms so our coefficients might be more interpretable. 
+In essence the models are the same underlying predictors, we've simply combined some terms so our coefficients might be more interpretable. 
 
 
 ###6.1.2
 
-In the first model, 2 of our 3 variables had significance, whereas in the new model the linear combination of all three has significance. This could have us in interpretation if we believe that that the change in BMI18 is changing in a linear way. 
+In the first model, 2 of our 3 variables had significance, whereas in the new model the linear combination of all three has significance. This could help us in interpretation if we believe that that the change in BMI18 is changing in a linear way with respect to each of the 3 variavbles, or to say that BMI is the same each year. 
 
 ###6.1.3
-The variance inflation is a metric which quantifies collinearity. It estimates the affect on variance caused by collinearity. In our second model, our variance infatlion factors are much higher, because we've increased collinearity of our terms via the transformation. 
+The variance inflation is a metric which quantifies collinearity. It estimates the affect on variance caused by collinearity of your predictors. In our second model, our variance infatlion factors are much higher, because we've increased collinearity of our terms via the transformation. This makes sense as we have included each of our transformed variables multiple times. 
 ```{r}
 vif(model_1)
-
+vif(model_2)
 ```
 
 ###6.1.4
+First let's get the variance out of variance-covariance matrix for lin.
 ```{r}
 vcov(model_2)[3,3]
-summary(model_2)$sigma^2/sd(BGSgirls$lin)^2/vif(model_2)[[2]]/nrow(BGSgirls)
+```
+
+In lecture, we were shown that the var(B^) = sigma^2 / (SD^2 * (n-1)) * (1/(1-R^2)), with the latter term (1/(1-R^2)) being the variance inflation factor.
+```{r}
+sig_square <- summary(model_2)$sigma^2
+sd_square <- sd(BGSgirls$lin)^2
+var_inf_factor <- vif(model_2)[[2]]
+n <- nrow(BGSgirls)
+(sig_square/(sd_square*(n-1))) * var_inf_factor
 ```
 ###6.1.5
 ```{r}
@@ -70,10 +89,10 @@ summary(model_2)$r.squared
 summary(model_1)$sigma
 summary(model_2)$sigma
 ```
-They are the same, which is to be expected as the models are mathematically equivalent, and merely transformations for interpretation
+They are the same, which is to be expected as the models are equivalent, and merely transformations for interpretation.
 
 ##6.2
-The coefficient for x1 will be negative anytime there is a negative linear relationship between the value of x1 and the conditional mean of Y. That is to say, that on average, the value of Y is decreasing given a corrresponding increase to x1. 
+We know that with both X1 and X2 fit, X1 has a positive coefficient. For X1 to switch signs, X2 would have to be collinear with X2 so that the additional detail provided by X2 leads to a scenario where the entirety of X1s positive linear trend is explained by X2, and the residuals after adjustment for X2 are negatively correlated with X1. To dive deeper into this we could fit a regression on the expected value of X1 given X2, or use added variable plots. 
 
 ##6.3
 ###4.9.1
@@ -84,4 +103,10 @@ For a male, the estimate is simply equal to the intercept without the adjustment
 For a female, the estimate is equal to the intercept with the adjustment term, 24697-3340.
 
 ###4.9.2
-Essentially, we have a relationship between our two predictors(Years and Sex) that provides the scenario that, on average, male professors have a higher number of years in their current role. This results in the variation that had been explained by sex being explained by years. 
+What has happened is that the relationship we saw with Salary and Sex is now being attributed to Salary and Years, and the coefficient for Sex is the value that minimizes the error after adjustment for Years. 
+
+In this situation, we have a relationship between our two predictors(Years and Sex) that provides the scenario that, on average, male professors have a higher number of years in their current role. 
+
+We can see this by fitting E(Salary|Sex) = 18065 + 201Sex + 759*E(Years|Sex).
+
+We can algebraically solve this as E(Years|Sex) = ((24697 - 18065)/759) - ((3340 + 201)/759)*Sex. By doing so we can determine that the two are equivalent given the mean estimation of Years given sex are 8.7 and 4 for males and females. 
