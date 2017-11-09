@@ -1,20 +1,54 @@
 ---
-title: "Untitled"
+title: "Assignment 7"
 author: "Chase Baggett"
-date: "November 1, 2017"
-output: html_document
+date: "November 2, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  github_document: default
 ---
+```{r, include=F}
+library(alr4)
+library(ggplot2)
+library(GGally)
+```
 
 ##7.1
 ###5.1.1
-```{r}
-library(linl)
-library(ggplot2)
-```
+
+We start with the estimated mean formula 
+  $E(Y|U_2,...,U_d) = B_0 + B_2U_2 + ... + B_dU_d$
+  and show that the lowest value of X is achieved at $U_2,...,U_d = 0$, then
+  $E(Y|U_2,...,U_d = 0) = B_0 + 0B_2 + ... + 0B_d$, thus
+  $E(Y|U_2,...,U_d = 0) = B_0$
+  
+###5.1.2
+RSS will be equal to the sum of the squared differences between $y_{ij}$ and $\mu_j$
+
+The full formula is expressed as:
+$$\sum_{j=1}^{d} \sum_{i=1}^{n_j} \left( y_{ij} - \mu_j \right)^2$$
+
+We know that the estimate of the population mean is the sample mean, thus the estimated mean is the average of the ys at the jth level of X. 
+
+###5.1.3
+$(n_j - 1)SD^2_j$ is equivalent to $\sum_{i=1}^{n_j} (y_{ij} - \mu_j)^2$, thus the sum of the quantity over $\sum_{j=1}^d$ completes our OLS estimate.
+
+###5.1.4
+Part 1:
+$\widehat{\beta_2},...,\widehat{\beta_d}$
+
+$$ se(\widehat{\beta_d} | x)^2 = se(\widehat{\mu_d}|x)^2 + se(\widehat{\mu_1|}x)^2$$
+$$ = \sigma^2/n $$ 
+Part 2:
+$\beta_0$
+
+$$se(\widehat{\beta}_0|X)^2 = \sigma^2/n$$
+
+
 ##7.2
 ###5.8.1
 ```{r}
-library(alr4)
+
 options(scipen=999)
 cakes$X22 <-cakes$X2^2 
 cakes$X12 <- cakes$X1^2
@@ -37,7 +71,8 @@ summary(model)
 ```{r}
 ggplot(BGSall,aes(x=HT9,y=HT18,shape=factor(Sex),color=factor(Sex))) + geom_point()
 ```
-Looking at the data it looks like we would have two parallel lines, with an adjusted intercept for male or female. So our mean function would be E(HT18|HT19) = B0 + B1*HT19 + B2*Sex.
+Looking at the data it looks like we would have two parallel lines, with an adjusted intercept for male or female. So our mean function would be $E(HT18|HT19) = B_0 + B_1HT19 + B_2Sex$.
+
 ###5.14.2
 We compare the null hypothesis model to the alternative hypothesis using an anova. The null hypothesis is the model that does not include Sex. Our alternative hypothesis is that sex creates an adjustment of the intercept. 
 ```{r}
@@ -54,22 +89,25 @@ confint(alternative_hypothesis,"Sex",level=.95)
 ##7.4
 ###A
   The effect of each of the variables: HT2, H9, and Sex are separate. The effect of HT2 and HT9 is not dependent sex or vice versa.  
+  
 ###B
   There is a different effect of Sex for HT2 vs HT9, which allows HT2 and HT9s effect to be different for Sex of male or female. 
+
 ###C
   There are now interraction terms between HT2 and HT9, as well as the full interaction of Sex with HT2 and HT9, which allows for joint variation of our variables. The effect of HT2 or HT9 now depends on both the other HT variable as well as sex, giving full interraction between all of our terms to provide a prediction.  
+
 ##7.5
+
 ###5.17.1
 I'm going to use ggpairs from the ggally package because it provides a quick look into the data. It provides us automatically with boxplots of the factor variables, correlation coefficients between our continuous variables and along the diagonals it has density plots of continuous variables and barplots of our factors.
 
 We see alot of correlation between ysdeg and years, and ysdeg and salary, and years and salary. We see that between the sexes, male salaries are higher, but the highest salary is a female. We see that with ysdeg, there is a tigher band for males than females, which are a much wider distribution. For years at current rank, males have a mnuch higher mean than females. 
 
 ```{r}
-library(GGally)
 ggpairs(salary)
 ```
 
-I'm also dig into the purely numerical data using coloring for males and females using a scatterplot matrix.
+I'm also going to explore the continuous data using coloring for males and females using a scatterplot matrix.
 
 Looking at the densities on the diagnoal, we can see that the density of years in current rank is much higher for males at the top left. The density for ysdeg is very normal for males, but very non-normal for females. We can also note that the density for year and salary for male and females look very similar. 
 
@@ -78,6 +116,7 @@ Looking at the correlation scatterplots and coefficients we can see that the cor
 ```{r}
 ggscatmat(salary, color="sex", alpha=0.8)
 ```
+
 ###5.17.2
 
 We can do a basic t-test on sex to answer the question in broad terms. We can see a significance level of .07, which could be rejected or accepted based on our confidence level. We see a $3340 higher salary for men. An alternative hypothesis is to use our above exporation to seek a "lurking" variable in the form of years or years since degree. 
@@ -97,6 +136,6 @@ confint(model,parm="sexFemale",level=.95)
 model2 <- update(model,~.-rank)
 summary(model2)$coef
 ```
-The salary is still lower for women, but loses statistical significance. Logically, we moved rank because we think its biased-- but all variables can be biased. Because the lurking variable "explains" the salary difference does not mean there is no discrimination, because it can be a vehicle for discrimination.
+The salary is still lower for women, but loses statistical significance. Logically, we removed rank because we think its biased-- but all variables can be biased. Because the lurking variable "explains" the salary difference does not mean there is no discrimination, because it can be a vehicle for discrimination.
 
 If it is harder for women to stay in the same role, it effects years in their current rank, and not retaining women at the same rate throughout the years could still be discriminatory. Similarly, only hiring women with less time since degree could be discriminatory hiring practices. We need separate and different models to examine years since degree and years in current rank as responses to understand if there is discrimination, but that is beyond the scope of the data we have in front of us. 
