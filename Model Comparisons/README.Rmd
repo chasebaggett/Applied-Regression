@@ -1,12 +1,17 @@
 ---
-title: "Untitled"
+title: "Assignment 8"
 author: "Chase Baggett"
-date: "November 8, 2017"
-output: html_document
+date: "November 9, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  github_document: default
 ---
 
 ```{r setup, include=FALSE}
 library(alr4)
+library(GGally)
+library(ggplot2)
 ```
 
 #8.1
@@ -16,11 +21,16 @@ model_1 <- lm(lifeExpF ~ 1,data=UN11)
 model_2 <- lm(lifeExpF ~ group,data=UN11)
 anova(model_1,model_2)
 ```
+
 #8.2
 
-One model is not a constrained version of the other model. 
+One model is not a constrained version of the other model. We can do a comparison in this manner between 6.7 or 6.8 and 6.9 or 6.10 because it is possible to constrain the other model to assume a coefficient is equal to zero, but we cannot constrain 6.7 or 6.8 to be equal to each other. 
 
-###ADDD MATH####
+We can express the t-test as the mean of the sample minus the hypothesized value, over the the standard error expressed as the sample standard deviation divided by the square root of the sample size.
+$$t = \frac{\bar{y} - y}{sd / \sqrt{n}}$$
+We can also epxress the F test in terms of the standard deviation, sample size, and sample mean.
+$$F = \frac{n(\bar{y} - y)^2}{sd^2}$$
+If we express them this way, it becomes apparent that $F = t^2$.
 
 #8.3
 ```{r}
@@ -57,12 +67,76 @@ anova(model_4,model_1)
 ```
 
 #8.5
+We start with an exploration of the data, and we see that IQb and IQf both appear roughly normally distributed. We see a correlation between IQf and IQb almost immediately. 
+```{r}
+ggpairs(twins)
+```
 
-LATER
+Now we fit a simple model of IQf and IQb. 
+```{r}
+model <- lm(IQf ~ IQb,data=twins)
+summary(model)
+```
+
+Now extract the residuals and look at the variance. It appears to be fairly constant, so we try a test for non-constant variance.
+```{r}
+twins$residuals <- predict(model) - twins$IQf
+ggplot(twins,aes(x=IQb,y=residuals)) + geom_point() + geom_smooth()
+ncvTest(model)
+```
+
+
+Now, we fit the model with C as a factor, and it appears class is not significant. IQb is very significant, and the model has an R-Square of .8 which suggests a large amount of the variation in IQf is explained by IQb. 
+```{r}
+model <- lm(IQf ~ IQb + C,data=twins)
+summary(model)
+```
+
+We can use an F test as well to verify that IQb is significant, and we see we can reject the null nypothesis that there is no significance. 
+
+```{r}
+nh <- lm(IQf ~ 1,data=twins)
+ah <- lm(IQf ~ IQb,data=twins)
+anova(ah,nh)
+```
+
+Now we move onto C.
+
+Let's test the model with and without C and see if we can reject the null hypothesis that class is not significant. 
+
+We cannot reject the null hypothesis using an F test.  
+```{r}
+nh <- lm(IQf ~ IQb,data=twins)
+ah <- lm(IQf ~ IQb + C,data=twins)
+anova(ah,nh)
+```
+
 
 #8.6
 
-LATER
+#7.7.1
+```{r}
+ggplot(galtonpeas,aes(x=Parent,y=Progeny)) + geom_point()
+```
+
+##7.7.2
+```{r}
+weighted_regression = lm(formula = Progeny ~ Parent, data = galtonpeas, weights = 1/SD^2)
+ggplot(galtonpeas,aes(x=Parent,y=Progeny)) + 
+    geom_point() +
+    geom_line(aes(y=predict(weighted_regression)))
+```
+
+##7.7.3
+
+The intercept would be increased due to the decrease in the slope, and the variance would be increased due to the biased selection. 
+
+##8.6.1
+
+Without weights, we are estimating the mean of a group of peas of an unknown size, not the size of an individual pea. 
+```{r}
+unweighted_regression = lm(formula = Progeny ~ Parent, data = galtonpeas)
+```
 
 #8.7
 

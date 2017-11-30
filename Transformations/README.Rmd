@@ -1,0 +1,125 @@
+---
+title: "Assignment 9"
+author: "Chase Baggett"
+date: "November 2, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  github_document: default
+---
+```{r, include=F}
+library(alr4)
+library(ggplot2)
+library(GGally)
+library(ggpubr)
+library(reshape)
+library(gridExtra)
+```
+
+##9.1
+
+Power Transform
+```{r}
+p_trans <- powerTransform(cbind(BigMac2003$BigMac,BigMac2003$Bread,BigMac2003$TeachGI) ~ 1)
+summary(p_trans)$result
+```
+Round Values
+```{r}
+pt <- function(x,lambda){if(lambda==0){log(x)}else{(x^lambda-1)/lambda}}
+BigMac2003$BigMacPT <- (BigMac2003$BigMac^-.5 - 1)/-.5
+#P189 says take log if zero.
+BigMac2003$BreadPT <- log(BigMac2003$Bread)
+BigMac2003$TeachGIPT <- (BigMac2003$TeachGI ^.33 -1)/.33
+
+fit_original <- lm(BigMacPT ~ BreadPT + TeachGIPT,data=BigMac2003)
+p1 <- gghistogram(BigMac2003,x="BigMac",fill="black") + ggtitle("Before Transform")
+p2 <- gghistogram(BigMac2003,x="BigMacPT",fill="blue") + ggtitle("After Transform")
+p3 <- gghistogram(BigMac2003,x="Bread",fill="black") + ggtitle("Before Transform")
+p4 <- gghistogram(BigMac2003,x="BreadPT",fill="blue") + ggtitle("After Transform")
+p5 <- gghistogram(BigMac2003,x="TeachGI",fill="black") + ggtitle("Before Transform")
+p6 <- gghistogram(BigMac2003,x="TeachGIPT",fill="blue") + ggtitle("After Transform")
+grid.arrange(p1,p2,p3,p4,p5,p6,ncol=2)
+```
+
+##9.1.1
+
+```{r}
+testTransform(p_trans,c(1,1,1))
+testTransform(p_trans,c(-1/3,0,1/3))
+```
+##9.1.2
+
+The units for TeachGI are are income in US dollars, but for countries all over the world. The units for bread are minutes of labor to purchase 1kg of Bread. Both of these things are expected to be very non-normally distributed because of massive economic differences and the difference purchasing power parity in different countries. 
+
+#9.2
+
+We round it to -.5
+```{r}
+fit <- lm(BigMac~Bread + TeachGI,data=BigMac2003)
+fit_bc <- powerTransform(fit,family="bcPower")
+fit_bc_summary <- summary(fit_bc)
+fit_bc_summary$result[1,1]
+
+BigMac2003$BigMac92 <- pt(BigMac2003$BigMac,fit_bc_summary$result[1,1])
+fit_bc_applied <- lm(BigMac92 ~ Bread + TeachGI,data=BigMac2003)
+```
+  
+#9.3
+ 
+```{r}
+t_tog <-  summary(powerTransform(cbind(BigMac2003$Bread,BigMac2003$TeachGI) ~ 1))$result
+
+
+#rounded power
+BigMac2003$Bread_new <- pt(BigMac2003$Bread,t_tog[1,2])
+BigMac2003$TeachGI_new <-  pt(BigMac2003$TeachGI,t_tog[2,2])
+
+transformed_fit <- lm(BigMac ~ Bread_new + TeachGI_new,data=BigMac2003)
+BigMac2003$Prediction <- predict(transformed_fit)
+ggplot(BigMac2003,aes(x=Prediction,y=BigMac)) + geom_point() + geom_abline(slope=1,intercept = 0)
+```
+
+Transforming the predictors and not the response leaves us with alot of remaining non-constant variance. 
+
+#9.4
+
+Our Model from 9.3 has significant non-constant variance, but the relationship appears linear. We have three points with considerible influence. 
+```{r}
+plot(transformed_fit,which=c(1,4))
+```
+
+Our model from 9.2 has solved this by power transforming the response, but the plot suggests our relationship is not linear. We have three points with significant influence, only one of which is the same. The influence is consideribly higher. 
+
+```{r}
+plot(fit_bc_applied,which=c(1,4))
+```
+In 9.1, we still had some nonlinearity, but it is the most linear with the most constant variance. I would choose this model. There are alot more points with higher influence, but that may not be a bad thing-- we may just be learning alot from those points. 
+
+```{r}
+plot(fit_original,which=c(1,4))
+```
+
+#9.5
+
+We use the Bonferonni P. R returns NA because the P is over 1. But it would hypothetically be the unadjusted P * the # of tests performed, so I've manually produced the illogical result of a P value over 1. 
+
+```{r}
+BigMac2003$BigMac95 <- pt(BigMac2003$BigMac,-1/3)
+BigMac2003$Bread95 <- pt(BigMac2003$Bread,0)
+BigMac2003$TeachGI95 <- pt(BigMac2003$TeachGI,1/3)
+
+hyp_fit <- lm(BigMac95 ~ Bread95 + TeachGI95,data=BigMac2003)
+outlierTest(hyp_fit)
+outlierTest(hyp_fit)[[2]][[1]]*nrow(BigMac2003)
+```
+
+For Moscow, because we checked it without looking at the data-- we can use the unadjusted P value.
+
+```{r}
+test_all <- outlierTest(hyp_fit, cutoff = 1*nrow(BigMac2003), n.max = nrow(BigMac2003), order = TRUE)
+test_all$p[5]
+```
+
+#9.6
+
+#9.7
