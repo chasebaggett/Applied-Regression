@@ -1,0 +1,104 @@
+---
+title: "Assignment 9"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#read in data
+assDat <- read.table("Waste.txt", header = FALSE)
+
+#name the variables
+nam <- c("FTE", "ImprV", "LandV", "Size", "Use", "Wst")
+names(assDat) <- nam
+
+#change the variable Use into factor
+assDat$Use <- as.factor(assDat$Use)
+
+#data splitting
+
+#get the number of observations
+(n <- nrow(assDat))
+
+#set random seed
+set.seed(20)
+
+#randomly select 2/3 of the data as the training set
+indi <- sample(n, n*2/3)
+
+#training data
+train <- assDat[indi,]
+#test data
+test <- assDat[-indi,]
+```
+
+
+
+Looking at our training data, we have one company that is consideribly larger than every other company in the dataset. For most of our predictors, there is a considerible gap between this company and the other available data points. 
+
+```{r}
+ggpairs(subset(train,F))
+```
+#Forming a Hypothesis
+
+If we think about the variables we have, many of them are measures of the size of the company in question, but in different ways they might respond to different types of companies, which we also have a categorical variable for. With FTE, as companies become larger they might be more prone to generate garbage. The size of the building in square feet could similarly correlate with how much raw material the company needs, which is likely to correlate with waste material. Value improvements should represent construction, which generates a large amount of waste.
+
+
+```{r}
+library(ggpubr)
+library(GGally)
+ggpairs(train)
+```
+
+
+Looking at our training data, we have very non-normal data due to considerible right skew. What is happening is that we have alot of very small companies in our data, and very few large ones. These large companies have very extreme values of all of our predictors. Because we have this right skewed nature to our data, we are going to take the log of each of our regressors.
+
+#Before Transformation
+```{r}
+all_features <- gather(train[,c("FTE","ImprV","LandV","Size","Wst")])
+all_features$value <- as.numeric(all_features$value)
+gghistogram(all_features,x = "value") + facet_wrap(~key,scales = "free")
+```
+
+#Before Transformation
+```{r}
+train$ImprV <- log(train$ImprV)
+train$FTE <- log(train$FTE)
+train$LandV <- log(train$LandV)
+train$Size <- log(train$Size)
+train$Wst <- log(train$Wst)
+all_features <- gather(train[,c("FTE","ImprV","LandV","Size","Wst")])
+all_features$value <- as.numeric(all_features$value)
+gghistogram(all_features,x = "value",bins=20) + facet_wrap(~key,scales = "free")
+```
+
+
+Now, let's make sure our relationships are linear.
+
+
+```{r}
+library(gridExtra)
+plots <- ggpairs(train)
+grid.arrange(getPlot(plots,6,1),
+             getPlot(plots,6,2),
+             getPlot(plots,6,3),
+             getPlot(plots,6,4)
+             )
+```
+
+
+The transformed variables do look linear with respect to Wst. 
+
+But concering is that they appear linear to each other.
+
+```{r}
+ggpairs(train[,c("FTE","ImprV","LandV","Size","Wst")])
+```
+
+
+
+```{r}
+mm <- model.matrix(fit)
+data2 <- as.data.frame(mm)
+data2$Wst <- train$Wst
+fit2 <- lm("Wst ~.",data=data2)
+```
