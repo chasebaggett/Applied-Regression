@@ -1,9 +1,14 @@
 ---
 title: "Assignment 9"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
+library(ggpubr)
+library(GGally)
+library(tidyr)
 #read in data
 assDat <- read.table("Waste.txt", header = FALSE)
 
@@ -23,7 +28,7 @@ assDat$Use <- as.factor(assDat$Use)
 set.seed(20)
 
 #randomly select 2/3 of the data as the training set
-indi <- sample(n, n*2/3)
+indi <- sample(n, n*7/10)
 
 #training data
 train <- assDat[indi,]
@@ -31,53 +36,57 @@ train <- assDat[indi,]
 test <- assDat[-indi,]
 ```
 
-
-
-Looking at our training data, we have one company that is consideribly larger than every other company in the dataset. For most of our predictors, there is a considerible gap between this company and the other available data points. 
-
-```{r}
-ggpairs(subset(train,F))
-```
 #Forming a Hypothesis
 
-If we think about the variables we have, many of them are measures of the size of the company in question, but in different ways they might respond to different types of companies, which we also have a categorical variable for. With FTE, as companies become larger they might be more prone to generate garbage. The size of the building in square feet could similarly correlate with how much raw material the company needs, which is likely to correlate with waste material. Value improvements should represent construction, which generates a large amount of waste.
+If we think about the variables we have, many of them are measures of the size of the company in question. The basic hypothesis at play here is that as companies become larger, they generate more waste. However, each of these variables measures a different type of company size. Number of employees, size of their location, land value, etc. 
 
+However, my exploration of the data will largely be focused around the interaction of these with the Use variable, which gives us a type of company we are dealing with. It seems likely to me that a restaurant may be able to generate more waste with fewer employees than an office building, as an example. In addition, number of employees may be an excellent predictor for one Use, but not for another. 
 
-```{r}
-library(ggpubr)
-library(GGally)
+We start, however, with an exploration of the data. 
+
+```{r,fig.width=4,fig.height=4,warning=F}
 ggpairs(train)
 ```
 
+#Transforming the Data
 
-Looking at our training data, we have very non-normal data due to considerible right skew. What is happening is that we have alot of very small companies in our data, and very few large ones. These large companies have very extreme values of all of our predictors. Because we have this right skewed nature to our data, we are going to take the log of each of our regressors.
+Looking at our training data, we have very non-normal data due to considerible right skew. What is happening is that we have alot of very small companies in our data, and very few large ones. These large companies have very extreme values of all of our predictors relative to the mean. Because we have this right skewed nature to our data, we are going to take the log of each of our regressors.
 
 #Before Transformation
-```{r}
+```{r,fig.width=4,fig.height=4,warning=F}
 all_features <- gather(train[,c("FTE","ImprV","LandV","Size","Wst")])
 all_features$value <- as.numeric(all_features$value)
 gghistogram(all_features,x = "value") + facet_wrap(~key,scales = "free")
 ```
 
 #Before Transformation
-```{r}
+```{r,fig.width=4,fig.height=4,warning=F}
 train$ImprV <- log(train$ImprV)
 train$FTE <- log(train$FTE)
 train$LandV <- log(train$LandV)
 train$Size <- log(train$Size)
 train$Wst <- log(train$Wst)
-all_features <- gather(train[,c("FTE","ImprV","LandV","Size","Wst")])
+all_features <- gather(train[,c("FTE","ImprV","LandV","Size","Wst","Use")])
 all_features$value <- as.numeric(all_features$value)
 gghistogram(all_features,x = "value",bins=20) + facet_wrap(~key,scales = "free")
 ```
 
 
-Now, let's make sure our relationships are linear.
+#Exploring Our Data
+
+We have one categorical variable, which is the type of company. We can see looking at it that there's a difference, but that overlap between groups for a given Wst value is also high. 
+
+```{r,fig.width=4,fig.height=4,warning=F}
+ggviolin(train,y="Wst",x="Use",fill="Use",title = "Violin + Boxplot of Wst by Use",add="boxplot")
+ggdensity(train,x="Wst",color = "Use") + ggtitle("Density Plots")
+```
+
+For our continuous variables, let's make sure our relationships are linear. We're also going to color by Use, and see if we can notice any differences in how we may need to model different uses separately. 
 
 
-```{r}
+```{r,fig.width=4,fig.height=4,warning=F}
 library(gridExtra)
-plots <- ggpairs(train)
+plots <- ggpairs(train,mapping=ggplot2::aes(colour = Use))
 grid.arrange(getPlot(plots,6,1),
              getPlot(plots,6,2),
              getPlot(plots,6,3),
@@ -86,19 +95,147 @@ grid.arrange(getPlot(plots,6,1),
 ```
 
 
-The transformed variables do look linear with respect to Wst. 
 
-But concering is that they appear linear to each other.
+Looking specifically at size, it looks as if some Uses respond differently to changes in Size. For group 5, we see a considerible increase as size increases-- this is retail, so it makes sense. For group 6, which is a restaurant or entertainment, changes in size don't seem to create alot of additional waste. For Use 4, it would be a poor predictor.
 
-```{r}
+```{r,fig.width=4,fig.height=4,warning=F}
+ggplot(train,aes(y=Wst,x=Size,color=Use)) + geom_point() + facet_wrap(~Use) + ggtitle("Change in Wst as Size Changes")
+```
+
+Similarly, if we look at how Wst Changes as LandV changes, we see that Use 2 seems to change very quickly as LandV changes.
+
+```{r,fig.width=4,fig.height=4,warning=F}
+ggplot(train,aes(y=Wst,x=LandV,color=Use)) + geom_point() + facet_wrap(~Use)
+```
+
+For Land Value increases, we see strong responses from Manufacturing, Warehousing, and Retail
+.
+```{r,fig.width=4,fig.height=4,warning=F}
+ggplot(train,aes(y=ImprV,x=FTE,color=Use)) + geom_point() + facet_wrap(~Use)
+```
+
+For FTE, we see strong responses across the board. 
+```{r,fig.width=4,fig.height=4,warning=F}
+ggplot(train,aes(y=Wst,x=FTE,color=Use)) + geom_point() + facet_wrap(~Use)
+```
+
+A problem we are going to have is very strong colinearity between our predictors. 
+
+But concering is that they appear linear to each other, which could make it challenging to get strong P values. 
+
+```{r,fig.width=4,fig.height=4,warning=F}
 ggpairs(train[,c("FTE","ImprV","LandV","Size","Wst")])
 ```
 
+I'm going to fit a model with the interactions we're seeing, then extract the model matrix and refit to allow me to backward select the factors level * predictor interactions that are significant and/or informative one at a time, instead of pulling the entire factor out, which is the default behavior for the step function. 
+
+```{r,fig.width=4,fig.height=4,warning=F}
+#Caret Helper Function
+fit <- dummyVars(as.formula("Wst ~ Use + Use * (LandV + ImprV + FTE + Size)"),data=train)
+#Generates the Full Model Matrix
+m_matrix <- as.data.frame(predict(fit,newdata=train))
+m_matrix$Wst <- train$Wst
+refit <- lm(Wst ~.,data=m_matrix)
+summary(refit)
+```
+
+What we essentially have now is a model fit with all the possible interactions of a given Use with each of our 4 continuous predictors. This fits with our first principle understanding of the data because we don't know which industries might generate more waste based on various growth factors.  
+
+Now I am going to use backwards stepwise selection to remove the ones that are not good predictors. We have damaged our ability to do statistical inference on this data, but we have a holdout dataset I have not yet looked at to verify the findings of the model.
 
 
-```{r}
-mm <- model.matrix(fit)
-data2 <- as.data.frame(mm)
-data2$Wst <- train$Wst
-fit2 <- lm("Wst ~.",data=data2)
+```{r,fig.width=4,fig.height=4,warning=F}
+backwise_selected_model <- step(refit,direction="backward",trace=F,k=2)
+summary(backwise_selected_model)
+```
+
+In addition, I wanted to try cross-validation using only my training set. I want to find variables that don't predict well when they are cross-validated. I've written my own step code because we're going to cross-validate at each step using MSE, but only within the training set. We will not be looking at the test set yet, but will be breaking the training set into 80/20 groups 5 times each. We will test each predictor 5 times by removing 20% of the data and attempting to predict the remaining 20%. If the variable does not predict well, we will remove it from the data. 
+
+
+
+```{r,fig.width=4,fig.height=4,warning=F}
+
+seeds_to_use <- c(33,34,35,36,37)
+diagnostics <- c()
+keep_going = TRUE
+best_fit <- backwise_selected_model
+
+for (k in 1:100){
+  #Extract Terms as it Will Change
+  terms <- attr(best_fit$terms,"term.labels")
+  mse_df <- data.frame(Terms=terms)
+  for (s in seeds_to_use){
+    mse_list <- c()
+    set.seed(s)
+    for (j in terms){
+      #Version of the Model at Current Step
+      bc_fit <- best_fit
+      
+      #Use a Random Sample of the Data
+      bc_idx <- sample(nrow(bc_fit$model), nrow(bc_fit$model)*4/5)
+      bc_train <- bc_fit$model[bc_idx,]
+      bc_test <- bc_fit$model[bc_idx,]
+      #Take off the Jth term
+      eval(parse(text=paste("bc_fit <- update(bc_fit, . ~ . -",j,")",sep="")))
+      #Fit on Train
+      bc_fit <- lm(formula(bc_fit),data=bc_train)
+      #Predict on Test
+      bc_mse <- mean((predict(bc_fit,newdata = bc_test) - bc_test$Wst)^2)
+      #Collect the AICs of Each Removed Regressor
+      mse_list <- c(mse_list,bc_mse)
+    }
+    mse_df[[paste("seed",s,sep="")]] <- mse_list 
+    
+  } 
+  
+  mse_df$Number_Better <- ifelse(mse_df$seed33 < mean(best_fit$residuals^2),1,0) +
+    ifelse(mse_df$seed34 < mean(best_fit$residuals^2),1,0) +
+    ifelse(mse_df$seed35 < mean(best_fit$residuals^2),1,0) +
+    ifelse(mse_df$seed36 < mean(best_fit$residuals^2),1,0) +
+    ifelse(mse_df$seed37 < mean(best_fit$residuals^2),1,0)
+  
+  mse_df$Mean_MSE <- (mse_df$seed33 + mse_df$seed34 + mse_df$seed35 + mse_df$seed36 + mse_df$seed37)/5
+  lowest_mse <- min(mse_df$Mean_MSE)
+  lowest_term <- mse_df$Terms[match(lowest_mse,mse_df$Mean_MSE)]
+  mse_df$Lowest_MSE_Before <- mean(best_fit$residuals^2)
+  
+  #If There is an Imporvement by Removing a term.
+  if (lowest_mse <= mean(best_fit$residuals^2)){
+    print(paste("Removing",lowest_term,"."))
+    #Actually Modify the Best Fit Model
+    eval(parse(text=paste("best_fit <- update(best_fit, . ~ . -",lowest_term,")",sep="")))
+  } else {
+    print("Done")
+    break
+  }
+  diagnostics <- c(diagnostics,list(mse_df))
+}
+
+```
+
+
+#Checking Against our Holdout
+
+Refitting our model on test to get accurate p-values.
+```{r,fig.width=4,fig.height=4,warning=F}
+test$ImprV <- log(test$ImprV)
+test$FTE <- log(test$FTE)
+test$LandV <- log(test$LandV)
+test$Size <- log(test$Size)
+test$Wst <- log(test$Wst)
+
+#Generates the Full Model Matrix
+test_matrix <- as.data.frame(predict(fit,newdata=test))
+test_matrix$Wst <- test$Wst
+
+test_fit <- lm(formula(best_fit),data=test_matrix)
+summary(test_fit)
+```
+
+
+#For Interpretation by the Client
+
+```{r,fig.width=4,fig.height=4,warning=F}
+train_data_matrix <- best_fit$model
+train_data_matrix[1] <- exp(train_data_matrix[1])
 ```

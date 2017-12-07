@@ -1,7 +1,7 @@
 ---
 title: "Assignment 9"
 author: "Chase Baggett"
-date: "November 2, 2017"
+date: "November 30, 2017"
 output:
   pdf_document: default
   html_document: default
@@ -19,12 +19,12 @@ library(gridExtra)
 ##9.1
 
 Power Transform
-```{r}
+```{r,warning=FALSE}
 p_trans <- powerTransform(cbind(BigMac2003$BigMac,BigMac2003$Bread,BigMac2003$TeachGI) ~ 1)
 summary(p_trans)$result
 ```
 Round Values
-```{r}
+```{r,warning=FALSE}
 pt <- function(x,lambda){if(lambda==0){log(x)}else{(x^lambda-1)/lambda}}
 BigMac2003$BigMacPT <- (BigMac2003$BigMac^-.5 - 1)/-.5
 #P189 says take log if zero.
@@ -43,7 +43,7 @@ grid.arrange(p1,p2,p3,p4,p5,p6,ncol=2)
 
 ##9.1.1
 
-```{r}
+```{r,warning=FALSE}
 testTransform(p_trans,c(1,1,1))
 testTransform(p_trans,c(-1/3,0,1/3))
 ```
@@ -54,7 +54,7 @@ The units for TeachGI are are income in US dollars, but for countries all over t
 #9.2
 
 We round it to -.5
-```{r}
+```{r,warning=FALSE}
 fit <- lm(BigMac~Bread + TeachGI,data=BigMac2003)
 fit_bc <- powerTransform(fit,family="bcPower")
 fit_bc_summary <- summary(fit_bc)
@@ -66,7 +66,7 @@ fit_bc_applied <- lm(BigMac92 ~ Bread + TeachGI,data=BigMac2003)
   
 #9.3
  
-```{r}
+```{r,warning=FALSE}
 t_tog <-  summary(powerTransform(cbind(BigMac2003$Bread,BigMac2003$TeachGI) ~ 1))$result
 
 
@@ -84,26 +84,26 @@ Transforming the predictors and not the response leaves us with alot of remainin
 #9.4
 
 Our Model from 9.3 has significant non-constant variance, but the relationship appears linear. We have three points with considerible influence. 
-```{r}
+```{r,warning=FALSE}
 plot(transformed_fit,which=c(1,4))
 ```
 
 Our model from 9.2 has solved this by power transforming the response, but the plot suggests our relationship is not linear. We have three points with significant influence, only one of which is the same. The influence is consideribly higher. 
 
-```{r}
+```{r,warning=FALSE}
 plot(fit_bc_applied,which=c(1,4))
 ```
 In 9.1, we still had some nonlinearity, but it is the most linear with the most constant variance. I would choose this model. There are alot more points with higher influence, but that may not be a bad thing-- we may just be learning alot from those points. 
 
-```{r}
+```{r,warning=FALSE}
 plot(fit_original,which=c(1,4))
 ```
 
 #9.5
 
-We use the Bonferonni P. R returns NA because the P is over 1. But it would hypothetically be the unadjusted P * the # of tests performed, so I've manually produced the illogical result of a P value over 1. 
+We use the Bonferonni P. R returns NA because the P is over 1. But it would hypothetically be the unadjusted P * the # of tests performed, so I've manually produced the illogical result of a P value over 1. It is not an outlier because we generated it from the data, but might be had we picked it without looking at the data. 
 
-```{r}
+```{r,warning=FALSE}
 BigMac2003$BigMac95 <- pt(BigMac2003$BigMac,-1/3)
 BigMac2003$Bread95 <- pt(BigMac2003$Bread,0)
 BigMac2003$TeachGI95 <- pt(BigMac2003$TeachGI,1/3)
@@ -115,11 +115,61 @@ outlierTest(hyp_fit)[[2]][[1]]*nrow(BigMac2003)
 
 For Moscow, because we checked it without looking at the data-- we can use the unadjusted P value.
 
-```{r}
+```{r,warning=FALSE}
 test_all <- outlierTest(hyp_fit, cutoff = 1*nrow(BigMac2003), n.max = nrow(BigMac2003), order = TRUE)
 test_all$p[5]
 ```
 
 #9.6
 
+Palm Beach is is an outlier justified by the Bonferonni P. Dade is also suspicious but we can't state that it is an outlier via this method. Had we chosen Dade before looking at the data for a specific reason, it might be considered an outlier when it is not because we generated it from the data, which forces us to consider its adjusted p value. 
+
+The maximum Cook's distance is over 2. This is a very high Cook's distance, which measures the influence specific points have in the model. It can be thought of as the effect of deleting a point, and is caused by either by being a strong outlier, exhibiting high leverage, or a combination of both. 
+```{r,warning=FALSE}
+ggplot(florida,aes(y=Buchanan,x=Bush)) + geom_point()
+fl_fit <- lm(Buchanan~Bush,data=florida)
+outlierTest(fl_fit,cutoff = 2)
+plot(fl_fit,which=4)
+```
+After Transformation, we still find Palm Beach to be an outlier. The maximum cook's distance is about .3.
+```{r,warning=FALSE}
+fl_fit_transformed <- lm(log(Buchanan) ~ log(Bush),data=florida)
+outlierTest(fl_fit_transformed)
+outlierTest(fl_fit_transformed)
+```
 #9.7
+
+First, let's look at a histogram of each of our values.
+
+```{r,warning=FALSE}
+cloud_melt <- melt(cloud)
+gghistogram(cloud_melt,x="value") + facet_wrap(~variable,scales = "free")
+```
+
+There's considerible non-normal data, so we're going to PowerTransform the non-binary values of our dataset.
+
+```{r,warning=FALSE}
+pt_result <- summary(powerTransform(cbind(cloud$S,cloud$C,cloud$P) ~ 1))$result
+
+cloud$S_New <- pt(cloud$S,pt_result[1])
+cloud$C_New <- pt(cloud$C,pt_result[2])
+cloud$P_New <- pt(cloud$P,pt_result[3])
+```
+
+A logical first principles model is to interact whether or not we seeded with each of the various underlying features that make the record more or less prone to Rainfall, such as its previous rainfall, the type of clouds, and its suitability. We will fit this type of model first, and examine it. 
+
+```{r,warning=FALSE}
+fit <- lm(Rain ~ A * (S_New + C_New + P_New + E) + D,data=cloud)
+plot(fit,which=1)
+```
+
+We see what looks like a U shape to our residuals, but its not very strong. But it looks like we are primarily seeing that because of one data point. However, with a Bonferonni P of .13, we can't classify it as an outlier.
+
+```{r,warning=FALSE}
+outlierTest(fit)
+```
+
+We can see that this point has alot of influence. It looks to have a very large amount of cloud cover and Prewetness (previous rainfall). Its three times the amount of cloud cover we saw anywhere else in the dataset.  Our next step would be to go look at the data and see if there is a logical reason this happened and whether or not it represents an outlier apart from its results in the data. 
+```{r,warning=FALSE}
+plot(fit,which=4)
+```
