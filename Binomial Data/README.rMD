@@ -1,0 +1,67 @@
+---
+title: "Assignment 11"
+author: "Chase Baggett"
+output:
+  pdf_document: default
+  html_document: default
+---
+#11.1
+
+HT18 and HT19 form the best predictors, because we see clear separation between the Sexes if we were try to separate them with a straight line. There is very little overlap between the sexes.
+
+#11.2
+
+The best linear combination would be a downward sloping line, because as we move left to right on that line, we see large changes in the density of Sexes which allows us to classify it if it were a latent variable. Howeever, principle components would not work, as it assumes variation, and would use an upward sloping line due to the increased variation.  
+
+```{r}
+ggplot(BGSall,aes(y=HT9,x=HT18)) + geom_point(shape=BGSall$Sex) + geom_abline(intercept =235,slope = -.6,color="blue")
+```
+
+
+#11.3
+Female Outliers.
+```{r}
+ggplot(BGSall,aes(y=HT9,x=HT18)) + geom_point(shape=BGSall$Sex) + geom_point(data=subset(BGSall,Sex==1 & HT18>176 & HT9<140),aes(y=HT9,x=HT18),color="red",shape=3,size=5)
+```
+#11.4
+
+We can interpet coeffcieints as tghe log odds that the response is 1 (female), conditioned on the value of the predictor. Holding other variables constant, an increase in HT18 decreases the log odds of someone being female. 
+```{r}
+binomial_model <- glm(Sex ~ HT2 + HT9 + HT18 + WT2 + WT9 + WT18,family=binomial(link='logit'),data=BGSall)
+summary(binomial_model)
+```
+
+
+#11.5
+
+###What is the curve on the plot estimating? 
+The classification probability as $\beta^T_iX$ changes. 
+
+##How does it show goodness of fit? 
+
+You see the point at which the line lifts from 0 and 1, and starts to predict between 0 and 1. The number of points in this overlap space gives you an idea for goodness of fit. 
+
+##How would you construct a smooth estimate of the mean function from this plot to check on the logistic fit.
+
+You could use localized regression to generate a smooth of the density of the points. Example below. 
+
+```{r}
+BGSall$Predicted <- predict(binomial_model)
+ggplot(BGSall,aes(y=Sex,x=Predicted)) + geom_point() + geom_smooth(method = "loess")
+```
+
+
+#11.6
+
+The rule given to us in class was to evaluate three things to decide on model. 
+
+Separated in Space, Linear Trend
+Separated in Space With Unequal Variance, Linear and Quadratic
+Separated in Space with Skew, Linear and Log
+
+It looks to me like there is roughly equal variance, but there is considerible skew, especially amongst females. So I would use the Linear as well as the log transformed values. 
+```{r}
+ggdensity(BGSall,x = "HT18",facet.by = "Sex")
+```
+
+

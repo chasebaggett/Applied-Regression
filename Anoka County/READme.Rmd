@@ -1,5 +1,6 @@
 ---
-title: "Assignment 9"
+title: "Assignment 10"
+author: "Chase Baggett"
 output:
   pdf_document: default
   html_document: default
@@ -7,8 +8,10 @@ output:
 
 ```{r setup, include=FALSE}
 library(ggpubr)
+library(caret)
 library(GGally)
 library(tidyr)
+library(car)
 #read in data
 assDat <- read.table("Waste.txt", header = FALSE)
 
@@ -28,7 +31,7 @@ assDat$Use <- as.factor(assDat$Use)
 set.seed(20)
 
 #randomly select 2/3 of the data as the training set
-indi <- sample(n, n*7/10)
+indi <- sample(n, n*8/10)
 
 #training data
 train <- assDat[indi,]
@@ -36,31 +39,23 @@ train <- assDat[indi,]
 test <- assDat[-indi,]
 ```
 
-#Forming a Hypothesis
-
-If we think about the variables we have, many of them are measures of the size of the company in question. The basic hypothesis at play here is that as companies become larger, they generate more waste. However, each of these variables measures a different type of company size. Number of employees, size of their location, land value, etc. 
-
-However, my exploration of the data will largely be focused around the interaction of these with the Use variable, which gives us a type of company we are dealing with. It seems likely to me that a restaurant may be able to generate more waste with fewer employees than an office building, as an example. In addition, number of employees may be an excellent predictor for one Use, but not for another. 
-
-We start, however, with an exploration of the data. 
-
-```{r,fig.width=4,fig.height=4,warning=F}
-ggpairs(train)
-```
-
 #Transforming the Data
 
 Looking at our training data, we have very non-normal data due to considerible right skew. What is happening is that we have alot of very small companies in our data, and very few large ones. These large companies have very extreme values of all of our predictors relative to the mean. Because we have this right skewed nature to our data, we are going to take the log of each of our regressors.
 
+```{r,warning=F}
+ggpairs(train)
+```
+
 #Before Transformation
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 all_features <- gather(train[,c("FTE","ImprV","LandV","Size","Wst")])
 all_features$value <- as.numeric(all_features$value)
 gghistogram(all_features,x = "value") + facet_wrap(~key,scales = "free")
 ```
 
 #Before Transformation
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 train$ImprV <- log(train$ImprV)
 train$FTE <- log(train$FTE)
 train$LandV <- log(train$LandV)
@@ -72,11 +67,30 @@ gghistogram(all_features,x = "value",bins=20) + facet_wrap(~key,scales = "free")
 ```
 
 
-#Exploring Our Data
+#Forming a Simple Model to Compete Against our Complex Model
+
+I'm going to use a non-interacted model. 
+```{r}
+simple_model <- lm(Wst ~ Use  + Size + FTE + LandV + ImprV,data=train)
+summary(simple_model)
+avPlots(simple_model)
+```
+Looking at the added variable plots, and the p-values, we remove Size, LandV, and ImprV as they seem to give little additional information and lack significance. 
+
+```{r}
+simple_model <- lm(Wst ~ Use + FTE,data=train)
+summary(simple_model)
+```
+
+#Forming an Alternative Hypothesis
+
+If we think about the variables we have, many of them are measures of the size of the company in question. The basic hypothesis at play here is that as companies become larger, they generate more waste. However, each of these variables measures a different type of company size. Number of employees, size of their location, land value, etc. 
+
+However, my exploration of the data will largely be focused around the interaction of these with the Use variable, which gives us a type of company we are dealing with. It seems likely to me that a restaurant may be able to generate more waste with fewer employees than an office building, as an example. In addition, number of employees may be an excellent predictor for one Use, but not for another. 
 
 We have one categorical variable, which is the type of company. We can see looking at it that there's a difference, but that overlap between groups for a given Wst value is also high. 
 
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 ggviolin(train,y="Wst",x="Use",fill="Use",title = "Violin + Boxplot of Wst by Use",add="boxplot")
 ggdensity(train,x="Wst",color = "Use") + ggtitle("Density Plots")
 ```
@@ -84,7 +98,7 @@ ggdensity(train,x="Wst",color = "Use") + ggtitle("Density Plots")
 For our continuous variables, let's make sure our relationships are linear. We're also going to color by Use, and see if we can notice any differences in how we may need to model different uses separately. 
 
 
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 library(gridExtra)
 plots <- ggpairs(train,mapping=ggplot2::aes(colour = Use))
 grid.arrange(getPlot(plots,6,1),
@@ -98,24 +112,24 @@ grid.arrange(getPlot(plots,6,1),
 
 Looking specifically at size, it looks as if some Uses respond differently to changes in Size. For group 5, we see a considerible increase as size increases-- this is retail, so it makes sense. For group 6, which is a restaurant or entertainment, changes in size don't seem to create alot of additional waste. For Use 4, it would be a poor predictor.
 
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 ggplot(train,aes(y=Wst,x=Size,color=Use)) + geom_point() + facet_wrap(~Use) + ggtitle("Change in Wst as Size Changes")
 ```
 
 Similarly, if we look at how Wst Changes as LandV changes, we see that Use 2 seems to change very quickly as LandV changes.
 
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 ggplot(train,aes(y=Wst,x=LandV,color=Use)) + geom_point() + facet_wrap(~Use)
 ```
 
 For Land Value increases, we see strong responses from Manufacturing, Warehousing, and Retail
 .
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 ggplot(train,aes(y=ImprV,x=FTE,color=Use)) + geom_point() + facet_wrap(~Use)
 ```
 
 For FTE, we see strong responses across the board. 
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 ggplot(train,aes(y=Wst,x=FTE,color=Use)) + geom_point() + facet_wrap(~Use)
 ```
 
@@ -123,15 +137,15 @@ A problem we are going to have is very strong colinearity between our predictors
 
 But concering is that they appear linear to each other, which could make it challenging to get strong P values. 
 
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 ggpairs(train[,c("FTE","ImprV","LandV","Size","Wst")])
 ```
 
 I'm going to fit a model with the interactions we're seeing, then extract the model matrix and refit to allow me to backward select the factors level * predictor interactions that are significant and/or informative one at a time, instead of pulling the entire factor out, which is the default behavior for the step function. 
 
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 #Caret Helper Function
-fit <- dummyVars(as.formula("Wst ~ Use + Use * (LandV + ImprV + FTE + Size)"),data=train)
+fit <- dummyVars(as.formula("Wst ~ Use + Use * (LandV + ImprV + FTE + Size) + Size*FTE + Size*LandV + Size*ImprV + LandV*ImprV + LandV*FTE + ImprV*FTE + LandV*FTE*Size + ImprV*FTE*Size + LandV*ImprV*Size + LandV*ImprV*FTE + LandV*ImprV*FTE*Size"),data=train)
 #Generates the Full Model Matrix
 m_matrix <- as.data.frame(predict(fit,newdata=train))
 m_matrix$Wst <- train$Wst
@@ -139,13 +153,14 @@ refit <- lm(Wst ~.,data=m_matrix)
 summary(refit)
 ```
 
-What we essentially have now is a model fit with all the possible interactions of a given Use with each of our 4 continuous predictors. This fits with our first principle understanding of the data because we don't know which industries might generate more waste based on various growth factors.  
+What we essentially have now is a model fit with all the possible interactions of a given Use with each of our 4 continuous predictors. 
 
 Now I am going to use backwards stepwise selection to remove the ones that are not good predictors. We have damaged our ability to do statistical inference on this data, but we have a holdout dataset I have not yet looked at to verify the findings of the model.
 
-
-```{r,fig.width=4,fig.height=4,warning=F}
-backwise_selected_model <- step(refit,direction="backward",trace=F,k=2)
+To avoid violating the marginality principle, I am going to force the lower scope to include the non-interacted terms. 
+```{r,warning=F}
+min_model <- as.formula("Wst ~ LandV + ImprV + FTE + Size")
+backwise_selected_model <- step(refit,scope=list(lower=min_model),direction="backward",trace=F,k=2)
 summary(backwise_selected_model)
 ```
 
@@ -153,7 +168,7 @@ In addition, I wanted to try cross-validation using only my training set. I want
 
 
 
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 
 seeds_to_use <- c(33,34,35,36,37)
 diagnostics <- c()
@@ -212,12 +227,16 @@ for (k in 1:100){
 }
 
 ```
+```{r}
+best_fit <- update(best_fit,formula. = as.formula("~. + FTE + Size"))
+summary(best_fit)
 
+```
 
 #Checking Against our Holdout
 
 Refitting our model on test to get accurate p-values.
-```{r,fig.width=4,fig.height=4,warning=F}
+```{r,warning=F}
 test$ImprV <- log(test$ImprV)
 test$FTE <- log(test$FTE)
 test$LandV <- log(test$LandV)
@@ -228,14 +247,74 @@ test$Wst <- log(test$Wst)
 test_matrix <- as.data.frame(predict(fit,newdata=test))
 test_matrix$Wst <- test$Wst
 
-test_fit <- lm(formula(best_fit),data=test_matrix)
-summary(test_fit)
+test_fit_simple <- lm(formula(simple_model),data=test)
+test_fit_complex <- lm(formula(best_fit),data=test_matrix)
+```
+
+Simple Model
+```{r}
+mean(test_fit_simple$residuals^2)
+summary(test_fit_simple)
+saveRDS(test_fit_simple,"simple.rds")
+```
+
+```{r}
+mean(test_fit_complex$residuals^2)
+summary(test_fit_complex)
+saveRDS(test_fit_complex,"complex.rds")
+```
+
+##10.2.1
+
+```{r}
+library(alr4)
+full_model <- lm(log(rate) ~ log(sigs1) + log(trks) + log(adt) + log(len) + lane + slim + shld + lwid + acpt + itg + htype,data=Highway1)
+
+#AIC Backward
+summary(step(full_model,trace=F,direction="backward"))
+#AIC Forward
+summary(step(full_model,trace=F,direction="forward"))
+#BIC Backward
+summary(step(full_model,trace=F,direction="backward",k=log(n)))
+#BIC Forward
+summary(step(full_model,trace=F,direction="forward",k=log(n)))
 ```
 
 
-#For Interpretation by the Client
+##11.2
 
-```{r,fig.width=4,fig.height=4,warning=F}
-train_data_matrix <- best_fit$model
-train_data_matrix[1] <- exp(train_data_matrix[1])
+##11.2.1
+```{r}
+ggplot(lakemary,aes(y=Length,x=Age)) + geom_point()
+```
+
+##11.2.2
+200 will be our initial value of L.
+
+So $\frac{E(Length|Age)}{200} = 1 - exp(-K(t-t_0))$
+
+If we log both sides, we should get $$log(\frac{E(Length|Age)}{200} ) = 0 + K(t-t_0)$$
+
+```{r}
+model <- lm(log(Length/200) ~ Age,data=lakemary)
+lakemary$Predicted <- predict(model)
+lakemary$Predicted <- exp(lakemary$Predicted)*200
+ggplot(lakemary,aes(y=Length,x=Age)) + geom_point() + geom_line(aes(y=Predicted,x=Age))
+```
+
+
+##11.4.1
+
+```{r}
+swan96$DaySquare <- swan96$Day^2
+quad_f <- as.formula("LCPUE ~ Day + DaySquare")
+linear_fit <- lm(quad_f,data=swan96)
+swan96$Predicted <- predict(linear_fit)
+
+ggplot(swan96,aes(y=LCPUE,x=Day)) + geom_point() + geom_line(aes(y=Predicted,x=Day))
+```
+
+##11.4.2
+```{r}
+deltaMethod(linear_fit,g="Day + Day^2")
 ```
